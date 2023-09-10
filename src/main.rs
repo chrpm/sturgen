@@ -6,7 +6,6 @@ use std::fs::File;
 use std::io::{self, BufRead, Write};
 use std::path::{Path, PathBuf};
 
-/// Search for a pattern in a file and display the lines that contain it.
 #[derive(Parser)]
 struct Cli {
     /// The path to the db dir
@@ -20,7 +19,7 @@ fn main() {
     let args = Cli::parse();
     let data_store_name = args.db;
 
-    let mut ds = open_data_store(data_store_name.clone());
+    let mut ds = open_data_store(data_store_name.clone()).expect("failed to open db");
 
     ds.get("test1".to_string());
     ds.insert("test1".to_string(), "test2".to_string());
@@ -123,23 +122,26 @@ impl DataStore {
     }
 }
 
-fn open_data_store(data_store_name: PathBuf) -> DataStore {
+fn open_data_store(data_store_name: PathBuf) -> Result<DataStore, String> {
     let mut in_mem = HashMap::new();
+
+    if !data_store_name.is_dir() {
+        return Err(String::from("directory doesn't exist"));
+    }
 
     let file_name = get_data_file_path(&data_store_name);
 
     load_data_file(&file_name, &mut in_mem);
 
-    return DataStore {
+    return Ok(DataStore {
         path: data_store_name,
         in_mem_data: in_mem,
-    };
+    });
 }
 
 fn write_data_store_to_disk(data_store: DataStore) {
-    let r = write_data_file(
+    write_data_file(
         &get_data_file_path(&data_store.path),
         data_store.in_mem_data,
-    );
-    r.unwrap()
+    ).expect("unable to write data to disk");
 }
