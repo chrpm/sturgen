@@ -29,7 +29,7 @@ fn main() {
 
     info!("starting db named {}", data_store_name.display());
 
-    write_data_store_to_disk(ds);
+    write_data_store_to_disk(ds).expect("failed to write data to disk");
 
     info!("shutting down");
 }
@@ -139,9 +139,9 @@ fn open_data_store(data_store_name: PathBuf) -> Result<DataStore, String> {
     });
 }
 
-fn write_data_store_to_disk(data_store: DataStore) {
-    write_data_file(
+fn write_data_store_to_disk(data_store: DataStore) -> Result<(), io::Error> {
+    return write_data_file(
         &get_data_file_path(&data_store.path),
         data_store.in_mem_data,
-    ).expect("unable to write data to disk");
+    )
 }
