@@ -2,30 +2,49 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::fs;
 use std::io::{self, BufRead, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use log::{debug, info};
+use clap::Parser;
+
+/// Search for a pattern in a file and display the lines that contain it.
+#[derive(Parser)]
+struct Cli {
+    /// The path to the db dir
+    #[arg(short, long)]
+    db: PathBuf,
+}
 
 fn main() {
-    // todo: get from user
-    let data_store_name = "starting";
+    env_logger::init();
 
-    let mut ds = open_data_store(data_store_name);
+    let args = Cli::parse();
+    let data_store_name = args.db;
 
+    let mut ds = open_data_store(data_store_name.clone());
+
+    ds.get("test1".to_string());
     ds.insert("test1".to_string(), "test2".to_string());
+    ds.get("test1".to_string());
+    ds.remove("test1".to_string());
+    ds.get("test1".to_string());
+
+    info!("starting db named {}", data_store_name.display());
 
     write_data_store_to_disk(ds);
 
-    println!("Success");
+    info!("shutting down");
 }
 
 const DATA_FILE_NAME: &str = "data";
 
-fn data_file_name(data_store_name: &str) -> String {
-    let file_name = format!("{}/{}", data_store_name, DATA_FILE_NAME);
-    return file_name;
+fn get_data_file_path(data_store_path: &PathBuf) -> PathBuf {
+    let mut dfp = data_store_path.clone();
+    dfp.push(DATA_FILE_NAME);
+    return dfp;
 }
 
-fn load_data_file(file_name: String,data_map: &mut HashMap<String, String>) {
-    if let Ok(lines) = read_lines(file_name) {
+fn load_data_file(file_path: &Path, data_map: &mut HashMap<String, String>) {
+    if let Ok(lines) = read_lines(file_path) {
         for line in lines {
             if let Ok(ip) = line {
                 let r = raw_line_to_key_val(ip);
@@ -68,17 +87,11 @@ where P: AsRef<Path>, {
     Ok(io::BufReader::new(file).lines())
 }
 
-fn write_data_file(data_store_name: String, data_map: HashMap<String, String>) -> std::io::Result<()> {
-    let file_name = data_file_name(&data_store_name);
-
-    let r = fs::remove_file(file_name.clone());
+fn write_data_file(file_path: &Path, data_map: HashMap<String, String>) -> io::Result<()> {
+    let r = fs::remove_file(file_path);
     r.ok(); // todo: add error handling
 
-    if !std::path::Path::new(&data_store_name).exists() {
-        std::fs::create_dir(data_store_name)?;
-    }
-
-    let mut output = File::create(file_name)?;
+    let mut output = File::create(file_path)?;
     for (k, v) in data_map {
         let line = key_val_to_raw_line(&k, &v);
         writeln!(output, "{}", line)?
@@ -87,39 +100,42 @@ fn write_data_file(data_store_name: String, data_map: HashMap<String, String>) -
 }
 
 struct DataStore {
-    name: String,
+    path: PathBuf,
     in_mem_data: HashMap<String,String>
 }
 
 impl DataStore {
     pub fn insert(&mut self, key: String, val: String) {
+        debug!("inserting key:{} val:{}", key, val);
         self.in_mem_data.insert(key, val);
     }
 
     pub fn get(&mut self, key: String) -> Option<&String> {
+        debug!("getting key:{}", key);
         return self.in_mem_data.get(&key);
     }
 
     pub fn remove(&mut self, key: String) {
+        debug!("removing key:{}", key);
         self.in_mem_data.remove(&key);
     }
 }
 
 
-fn open_data_store(data_store_name: &str) -> DataStore {
+fn open_data_store(data_store_name: PathBuf) -> DataStore {
     let mut in_mem = HashMap::new();
 
-    let file_name = data_file_name(data_store_name);
+    let file_name = get_data_file_path(&data_store_name);
 
-    load_data_file(file_name, &mut in_mem);
+    load_data_file(&file_name, &mut in_mem);
 
     return DataStore{
-        name: data_store_name.to_string(),
+        path: data_store_name,
         in_mem_data: in_mem 
     };
 }
 
 fn write_data_store_to_disk(data_store: DataStore) {
-    let r = write_data_file(data_store.name, data_store.in_mem_data);
+    let r = write_data_file(&get_data_file_path(&data_store.path), data_store.in_mem_data);
     r.unwrap()
 }
