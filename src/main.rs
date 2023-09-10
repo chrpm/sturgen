@@ -1,10 +1,10 @@
+use clap::Parser;
+use log::{debug, info};
 use std::collections::HashMap;
-use std::fs::File;
 use std::fs;
+use std::fs::File;
 use std::io::{self, BufRead, Write};
 use std::path::{Path, PathBuf};
-use log::{debug, info};
-use clap::Parser;
 
 /// Search for a pattern in a file and display the lines that contain it.
 #[derive(Parser)]
@@ -48,7 +48,7 @@ fn load_data_file(file_path: &Path, data_map: &mut HashMap<String, String>) {
         for line in lines {
             if let Ok(ip) = line {
                 let r = raw_line_to_key_val(ip);
-                data_map.insert(r.0,r.1);
+                data_map.insert(r.0, r.1);
             }
         }
     }
@@ -82,7 +82,9 @@ fn unescape_str(raw: &str) -> String {
 }
 
 fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
-where P: AsRef<Path>, {
+where
+    P: AsRef<Path>,
+{
     let file = File::open(filename)?;
     Ok(io::BufReader::new(file).lines())
 }
@@ -101,7 +103,7 @@ fn write_data_file(file_path: &Path, data_map: HashMap<String, String>) -> io::R
 
 struct DataStore {
     path: PathBuf,
-    in_mem_data: HashMap<String,String>
+    in_mem_data: HashMap<String, String>,
 }
 
 impl DataStore {
@@ -121,7 +123,6 @@ impl DataStore {
     }
 }
 
-
 fn open_data_store(data_store_name: PathBuf) -> DataStore {
     let mut in_mem = HashMap::new();
 
@@ -129,13 +130,16 @@ fn open_data_store(data_store_name: PathBuf) -> DataStore {
 
     load_data_file(&file_name, &mut in_mem);
 
-    return DataStore{
+    return DataStore {
         path: data_store_name,
-        in_mem_data: in_mem 
+        in_mem_data: in_mem,
     };
 }
 
 fn write_data_store_to_disk(data_store: DataStore) {
-    let r = write_data_file(&get_data_file_path(&data_store.path), data_store.in_mem_data);
+    let r = write_data_file(
+        &get_data_file_path(&data_store.path),
+        data_store.in_mem_data,
+    );
     r.unwrap()
 }
