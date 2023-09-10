@@ -89,14 +89,14 @@ where
 }
 
 fn write_data_file(file_path: &Path, data_map: HashMap<String, String>) -> io::Result<()> {
-    let r = fs::remove_file(file_path);
-    r.ok(); // todo: add error handling
+    fs::remove_file(file_path)?;
 
     let mut output = File::create(file_path)?;
     for (k, v) in data_map {
         let line = key_val_to_raw_line(&k, &v);
         writeln!(output, "{}", line)?
     }
+
     return Ok(());
 }
 
@@ -143,5 +143,5 @@ fn write_data_store_to_disk(data_store: DataStore) -> Result<(), io::Error> {
     return write_data_file(
         &get_data_file_path(&data_store.path),
         data_store.in_mem_data,
-    )
+    );
 }
