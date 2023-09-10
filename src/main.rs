@@ -89,7 +89,9 @@ where
 }
 
 fn write_data_file(file_path: &Path, data_map: HashMap<String, String>) -> io::Result<()> {
-    fs::remove_file(file_path)?;
+    if file_path.is_file() {
+        fs::remove_file(file_path)?;
+    }
 
     let mut output = File::create(file_path)?;
     for (k, v) in data_map {
