@@ -18,6 +18,7 @@ fn main() {
 
     let args = Cli::parse();
     let data_store_name = args.db;
+    info!("starting db named {}", data_store_name.display());
 
     let mut ds = open_data_store(data_store_name.clone()).expect("failed to open db");
 
@@ -26,8 +27,6 @@ fn main() {
     ds.get("test1".to_string());
     ds.remove("test1".to_string());
     ds.get("test1".to_string());
-
-    info!("starting db named {}", data_store_name.display());
 
     write_data_store_to_disk(ds).expect("failed to write data to disk");
 
